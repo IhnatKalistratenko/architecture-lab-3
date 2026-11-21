@@ -37,8 +37,12 @@ test("failed payment keeps the existing API behaviour", async () => {
     lines: [{ productId: "book", unitPrice: 50, quantity: 1 }],
   });
 
-  assert.equal(response.paymentStatus, "failed");
-  assert.equal(response.status, "payment_pending");
+  assert.deepEqual(response, {
+    orderId: "order-2",
+    status: "payment_pending",
+    total: 60,
+    paymentStatus: "failed",
+  });
 });
 
 test("processing payment is exposed without confirming the order", async () => {
@@ -63,4 +67,25 @@ test("checkout rejects an unavailable product", async () => {
     }),
     /Insufficient stock/,
   );
+});
+
+test("out-of-stock order does not partially reserve stock", async () => {
+  database.stock.set("notebook", { productId: "notebook", available: 1 });
+  const before = [...database.stock.entries()].map(([id, row]) => [id, { ...row }]);
+
+  await assert.rejects(
+    () => new CheckoutController().checkout({
+      orderId: "order-oos",
+      paymentToken: "tok_valid",
+      currency: "UAH",
+      lines: [
+        { productId: "book", unitPrice: 10, quantity: 2 },
+        { productId: "notebook", unitPrice: 20, quantity: 2 },
+      ],
+    }),
+    /Insufficient stock/,
+  );
+
+  assert.deepEqual([...database.stock.entries()], before);
+  assert.equal(database.orders.has("order-oos"), false);
 });

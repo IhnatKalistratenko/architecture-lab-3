@@ -4,9 +4,9 @@
 
 ## Decision 1: Єдина нормалізація статусу в Payments
 
-**Problem:** Orders, Reports і Notifications мали дубльоване зіставлення provider status, а Payments напряму змінював внутрішній стан Orders.
+**Problem:** Provider-specific status mapping був дубльований, а Orders залежав від конкретної реалізації оплати.
 
-**Evidence:** Раніше `StripeClient`, `src/reports/mapPaymentStatus.ts` і `src/notifications/mapPaymentStatus.ts` окремо трактували `succeeded`, `requires_action` і `declined`.
+**Evidence:** `StripeClient`, `src/reports/mapPaymentStatus.ts` і `src/notifications/mapPaymentStatus.ts` трактували `succeeded`, `requires_action` і `declined` окремо; Orders імпортував провайдер напряму.
 
 **Decision:** Винести тип системного статусу та `normalizePaymentStatus` у `src/payments/PaymentStatus.ts`; Orders викликає `PaymentsPort`, який інкапсулює Stripe payload і повертає нормалізований статус.
 
@@ -37,3 +37,39 @@
 **Trade-off:** Невідомий статус потребує подальшої звірки/оновлення; без неї замовлення може залишатися в очікуванні.
 
 **Verification:** Unit test підтверджує unknown → `processing`; Checkout зберігає для нього `payment_pending`.
+
+## Decision 3: Reserve stock атомарно для всіх позицій замовлення
+
+**Problem:** Послідовне резервування могло зменшити залишок першого товару, а потім завершитися помилкою на наступному товарі без запасу.
+
+**Evidence:** `OrderService.placeOrder` резервує кошик перед створенням замовлення та викликом Payments; часткова помилка залишала б Inventory зміненим.
+
+**Decision:** `StockRepository.reserveMany` спершу агрегує кількості за товаром і перевіряє всі рядки, а вже потім записує нові залишки.
+
+**Why:** Inventory централізовано забезпечує інваріант: невдале резервування не змінює жодного залишку, а доступна кількість не стає від'ємною.
+
+**Alternative:** Викликати `reserve` для кожного рядка й робити компенсувальні повернення у `catch`.
+
+**Why rejected:** Компенсація додає ще один шлях помилки та розподіляє інваріант між Orders і Inventory.
+
+**Trade-off:** Перед записом потрібні дві ітерації та тимчасова мапа агрегованих кількостей.
+
+**Verification:** Functional test робить першу позицію доступною, наступну недоступною, і перевіряє незмінність усіх залишків та відсутність створеного замовлення.
+
+## Decision 4: calculateTotal отримує конфігурацію явно й лишається чистою функцією
+
+**Problem:** Приховане читання конфігурації, мутація рядків і запис у глобальний лог робили результат залежним від стану поза аргументами.
+
+**Evidence:** Обчислення total викликається з Checkout, де доступні конфігурація й логування; ці побічні ефекти не є частиною арифметики.
+
+**Decision:** `calculateTotal(lines, discountPercent, taxRate)` лише читає параметри та повертає число. Checkout передає конфігурацію і записує audit-подію окремо.
+
+**Why:** Результат можна відтворити й перевірити лише за аргументами, без підготовки глобального стану.
+
+**Alternative:** Залишити глобальні `runtimeConfig` та `auditLog` усередині функції.
+
+**Why rejected:** Такий контракт приховує залежності та ускладнює ізольовані перевірки.
+
+**Trade-off:** Виклики мають передавати обидва параметри явно.
+
+**Verification:** Unit tests перевіряють детермінований результат з явними параметрами та відсутність мутації вхідного масиву.

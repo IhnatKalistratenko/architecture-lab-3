@@ -1,4 +1,5 @@
 import { normalizePaymentStatus, type PaymentStatus } from "./PaymentStatus.ts";
+import type { ProviderInterface } from "./internal/ProviderInterface.ts";
 import { StripeClient } from "./internal/StripeClient.ts";
 
 export type { PaymentStatus } from "./PaymentStatus.ts";
@@ -15,7 +16,7 @@ export interface PaymentsPort {
 }
 
 export class PaymentsService implements PaymentsPort {
-  private readonly stripe: StripeClient;
+  private readonly stripe: ProviderInterface;
 
   constructor(stripe = new StripeClient()) {
     this.stripe = stripe;
@@ -28,7 +29,6 @@ export class PaymentsService implements PaymentsPort {
       currency: request.currency,
       metadata: { orderId: request.orderId },
     });
-
     return normalizePaymentStatus(response.state);
   }
 }

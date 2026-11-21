@@ -22,6 +22,6 @@
 
 ## Actual impact
 
-**Actual files changed:** `src/payments/PaymentStatus.ts`, `src/payments/Payments.ts`, `src/payments/internal/StripeClient.ts`, `src/orders/OrderService.ts`, `src/checkout/CheckoutController.ts`, видалені дубльовані status mapper файли Reports/Notifications і застарілий `orders/internal/orderMutations.ts`; додані unit та functional тести; оновлені `REVIEW.md` і `DECISIONS.md`.
+**Actual files changed:** `src/payments/PaymentStatus.ts`, `src/payments/PaymentService.ts`, `src/payments/internal/ProviderInterface.ts`, `src/payments/internal/StripeClient.ts`, `src/orders/OrderService.ts`, `src/inventory/StockRepository.ts`, `src/inventory/OrderRepository.ts`, `src/checkout/CheckoutController.ts`, `src/shared/calculateTotal.ts`, `src/config.ts`, `src/demo.ts`; видалені дубльовані status mapper файли Reports/Notifications та застарілі внутрішні мутації Orders; додані `tests/calculate-total.test.ts` та unit/functional перевірки.
 
-**Difference from prediction and explanation:** Checkout теж змінився, бо Stripe payload раніше формувався в контролері. Unknown provider status визначено як `processing`, щоб невідомий фінансовий результат не трактувався як остаточний успіх або відмова.
+**Difference from prediction and explanation:** Початковий прогноз стосувався нормалізації payment status, тож не включав Inventory та `calculateTotal`. Для нових level tests довелося атомарно резервувати весь кошик у `StockRepository`, винести конфігурацію/логування з чистого обчислення total і додати їхні unit/functional перевірки. Реальна структура Payments використовує `PaymentService` замість прогнозованого `Payments.ts`; це не змінює межу модуля. Checkout отримав дефолтні залежності, щоб зберегти наявний спосіб виклику та форму публічної відповіді.

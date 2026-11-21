@@ -1,5 +1,6 @@
 import { calculateTotal, type CartLine } from "../shared/calculateTotal.ts";
 import { OrderService } from "../orders/OrderService.ts";
+import { auditLog, runtimeConfig, type RuntimeConfigInterface } from "../config.ts";
 
 export type CheckoutRequest = {
   orderId: string;
@@ -10,13 +11,22 @@ export type CheckoutRequest = {
 
 export class CheckoutController {
   private readonly orders: OrderService;
+  private readonly logger: string[];
+  private readonly config: RuntimeConfigInterface;
 
-  constructor(orders = new OrderService()) {
+  constructor(
+    orders = new OrderService(),
+    logger: string[] = auditLog,
+    config: RuntimeConfigInterface = runtimeConfig,
+  ) {
     this.orders = orders;
+    this.logger = logger;
+    this.config = config;
   }
 
   async checkout(request: CheckoutRequest) {
-    const total = calculateTotal(request.lines);
+    const total = calculateTotal(request.lines, this.config.discountPercent, this.config.taxRate);
+    this.logger.push(`total_calculated:${total}`);
 
     const payment = {
       paymentToken: request.paymentToken,

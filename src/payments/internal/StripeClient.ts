@@ -1,3 +1,5 @@
+import type { ProviderInterface } from "./ProviderInterface.ts";
+
 export type StripePayload = {
   id: string;
   amount: number;
@@ -10,7 +12,7 @@ export type StripeResponse = {
   state: string;
 };
 
-export class StripeClient {
+export class StripeClient implements ProviderInterface {
   async createCharge(payload: StripePayload): Promise<StripeResponse> {
     const state = payload.id.startsWith("fail_")
       ? "declined"
