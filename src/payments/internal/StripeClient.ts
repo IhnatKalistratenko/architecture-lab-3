@@ -1,6 +1,8 @@
+import type { PaymentRequest } from "../PaymentContracts.ts";
+import type { PaymentStatus } from "../PaymentStatus.ts";
 import type { ProviderInterface } from "./ProviderInterface.ts";
 
-export type StripePayload = {
+type StripePayload = {
   id: string;
   amount: number;
   currency: string;
@@ -13,13 +15,36 @@ export type StripeResponse = {
 };
 
 export class StripeClient implements ProviderInterface {
-  async createCharge(payload: StripePayload): Promise<StripeResponse> {
-    const state = payload.id.startsWith("fail_")
+  normalizePaymentStatus(response: StripeResponse): PaymentStatus {
+  switch (response.state) {
+    case "succeeded":
+      return "paid";
+    case "requires_action":
+      return "processing";
+    case "declined":
+      return "failed";
+    default:
+
+      return "processing";
+  }
+}
+  async charge(payload: PaymentRequest): Promise<PaymentStatus> {
+    const stripePayload: StripePayload = {
+      id: payload.paymentToken,
+      amount: payload.amount,
+      currency: payload.currency,
+      metadata: {orderId: payload.orderId}
+    };
+
+
+    const state = stripePayload.id.startsWith("fail_")
       ? "declined"
-      : payload.id.startsWith("action_")
+      : stripePayload.id.startsWith("action_")
         ? "requires_action"
-        : "succeeded";
-    const response: StripeResponse = { charge_id: `ch_${payload.id}`, state };
-    return response;
+        : stripePayload.id.startsWith("unknown_")
+          ? "unrecognized_state"
+          : "succeeded";
+    const response: StripeResponse = { charge_id: `ch_${stripePayload.id}`, state };
+    return this.normalizePaymentStatus(response);
   }
 }

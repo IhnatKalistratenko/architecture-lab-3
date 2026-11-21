@@ -1,34 +1,28 @@
-import { normalizePaymentStatus, type PaymentStatus } from "./PaymentStatus.ts";
 import type { ProviderInterface } from "./internal/ProviderInterface.ts";
 import { StripeClient } from "./internal/StripeClient.ts";
+import { AcmeClient } from "./internal/AcmeClient.ts";
+import type { PaymentProviderName, PaymentRequest, PaymentsPort } from "./PaymentContracts.ts";
+import type { PaymentStatus } from "./PaymentStatus.ts";
 
+export type { PaymentProviderName, PaymentRequest, PaymentsPort } from "./PaymentContracts.ts";
 export type { PaymentStatus } from "./PaymentStatus.ts";
 
-export type PaymentRequest = {
-  paymentToken: string;
-  amount: number;
-  currency: string;
-  orderId: string;
-};
-
-export interface PaymentsPort {
-  charge(request: PaymentRequest): Promise<PaymentStatus>;
+export class PaymentsService implements PaymentsPort {
+  async charge(request: PaymentRequest): Promise<PaymentStatus> {
+    const provider = createProvider(request.provider);
+    return provider.charge(request);
+  }
 }
 
-export class PaymentsService implements PaymentsPort {
-  private readonly stripe: ProviderInterface;
-
-  constructor(stripe = new StripeClient()) {
-    this.stripe = stripe;
-  }
-
-  async charge(request: PaymentRequest): Promise<PaymentStatus> {
-    const response = await this.stripe.createCharge({
-      id: request.paymentToken,
-      amount: request.amount,
-      currency: request.currency,
-      metadata: { orderId: request.orderId },
-    });
-    return normalizePaymentStatus(response.state);
+function createProvider(provider: PaymentProviderName): ProviderInterface {
+  switch (provider) {
+    case "stripe":
+      return new StripeClient();
+    case "acme":
+      return new AcmeClient();
+    default: {
+      const unreachable: never = provider;
+      throw new Error(`Unsupported payment provider: ${unreachable}`);
+    }
   }
 }

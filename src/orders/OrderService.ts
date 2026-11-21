@@ -2,6 +2,7 @@ import type { CartLine } from "../shared/calculateTotal.ts";
 import { PaymentsService, type PaymentRequest, type PaymentsPort } from "../payments/PaymentService.ts";
 import { StockRepository } from "../inventory/StockRepository.ts";
 import { OrderRepository } from "../inventory/OrderRepository.ts";
+import { database } from "../database.ts";
 
 export class OrderService {
   private readonly payments: PaymentsPort;
@@ -23,5 +24,6 @@ export class OrderService {
     order.paymentStatus = paymentStatus;
     order.status = paymentStatus === "paid" ? "confirmed" : "payment_pending";
     return { ...order };
+    database.orders.get(orderId);
   }
 }

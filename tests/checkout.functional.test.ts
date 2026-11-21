@@ -14,6 +14,7 @@ test.beforeEach(() => {
 
 test("successful checkout preserves the public response", async () => {
   const response = await new CheckoutController().checkout({
+    provider: "stripe",
     orderId: "order-1",
     paymentToken: "tok_valid",
     currency: "UAH",
@@ -31,6 +32,7 @@ test("successful checkout preserves the public response", async () => {
 
 test("failed payment keeps the existing API behaviour", async () => {
   const response = await new CheckoutController().checkout({
+    provider: "stripe",
     orderId: "order-2",
     paymentToken: "fail_card",
     currency: "UAH",
@@ -47,6 +49,7 @@ test("failed payment keeps the existing API behaviour", async () => {
 
 test("processing payment is exposed without confirming the order", async () => {
   const response = await new CheckoutController().checkout({
+    provider: "stripe",
     orderId: "order-4",
     paymentToken: "action_card",
     currency: "UAH",
@@ -60,6 +63,7 @@ test("processing payment is exposed without confirming the order", async () => {
 test("checkout rejects an unavailable product", async () => {
   await assert.rejects(
     () => new CheckoutController().checkout({
+      provider: "stripe",
       orderId: "order-3",
       paymentToken: "tok_valid",
       currency: "UAH",
@@ -75,6 +79,7 @@ test("out-of-stock order does not partially reserve stock", async () => {
 
   await assert.rejects(
     () => new CheckoutController().checkout({
+      provider: "stripe",
       orderId: "order-oos",
       paymentToken: "tok_valid",
       currency: "UAH",
@@ -88,4 +93,21 @@ test("out-of-stock order does not partially reserve stock", async () => {
 
   assert.deepEqual([...database.stock.entries()], before);
   assert.equal(database.orders.has("order-oos"), false);
+});
+
+test("checkout selects Acme from the request body", async () => {
+  const response = await new CheckoutController().checkout({
+    provider: "acme",
+    orderId: "order-acme",
+    paymentToken: "valid_token",
+    currency: "UAH",
+    lines: [{ productId: "book", unitPrice: 50, quantity: 1 }],
+  });
+
+  assert.deepEqual(response, {
+    orderId: "order-acme",
+    status: "confirmed",
+    total: 60,
+    paymentStatus: "paid",
+  });
 });

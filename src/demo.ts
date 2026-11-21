@@ -7,6 +7,7 @@ resetDatabase();
 database.stock.set("book", { productId: "book", available: 5 });
 
 const result = await new CheckoutController(new OrderService(), auditLog, runtimeConfig).checkout({
+  provider: "stripe",
   orderId: "order-demo",
   paymentToken: "tok_demo",
   currency: "UAH",

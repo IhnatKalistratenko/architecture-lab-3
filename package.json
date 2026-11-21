@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node src/demo.ts",
+    "check:architecture": "node scripts/check-architecture.mjs",
     "test": "node --test tests/*.test.ts",
     "test:watch": "node --test --watch tests/*.test.ts"
   }

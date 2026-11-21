@@ -73,3 +73,21 @@
 **Trade-off:** Виклики мають передавати обидва параметри явно.
 
 **Verification:** Unit tests перевіряють детермінований результат з явними параметрами та відсутність мутації вхідного масиву.
+
+## Decision 5: Вибір провайдера всередині Payments
+
+**Problem:** Другий provider adapter потребує окремих формату запиту, відповіді та назв статусів, але його інтеграція не має поширюватися в Checkout чи Orders.
+
+**Evidence:** Обидва adapters отримують спільний `PaymentRequest` із селектором `provider`, однак Stripe використовує `succeeded`/`requires_action`/`declined`, а Acme — `APPROVED`/`PENDING_REVIEW`/`REJECTED`.
+
+**Decision:** `PaymentRequest.provider` приймає `stripe` або `acme`; `PaymentsService.charge(request)` вибирає відповідний внутрішній adapter, не змінюючи сигнатуру методу чи системний `PaymentStatus`.
+
+**Why:** Додавання провайдера змінює лише composition усередині Payments; Orders та інші споживачі працюють з тим самим контрактом.
+
+**Alternative:** Додавати provider-specific гілки до Checkout або передавати адаптерні запити з Orders.
+
+**Why rejected:** Це витекло б деталями провайдера за межі Payments і змусило б змінювати consumers.
+
+**Trade-off:** Запит явно містить вибір провайдера; для нового адаптера треба додати варіант селектора й локальну нормалізацію.
+
+**Verification:** Перевірки викликають обидва adapters через однаковий публічний `charge` API для `paid`, `processing` і `failed`.

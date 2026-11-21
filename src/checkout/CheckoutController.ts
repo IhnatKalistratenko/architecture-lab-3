@@ -1,10 +1,12 @@
 import { calculateTotal, type CartLine } from "../shared/calculateTotal.ts";
 import { OrderService } from "../orders/OrderService.ts";
 import { auditLog, runtimeConfig, type RuntimeConfigInterface } from "../config.ts";
+import type { PaymentProviderName } from "../payments/PaymentService.ts";
 
 export type CheckoutRequest = {
   orderId: string;
   paymentToken: string;
+  provider: PaymentProviderName;
   currency: string;
   lines: CartLine[];
 };
@@ -33,6 +35,7 @@ export class CheckoutController {
       amount: Math.round(total * 100),
       currency: request.currency,
       orderId: request.orderId,
+      provider: request.provider,
     };
 
     const order = await this.orders.placeOrder(
